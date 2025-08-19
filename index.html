@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPG Turn Order</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Ordem de Turnos - RPG</h1>
+
+  <div class="controls">
+    <input type="text" id="playerName" placeholder="Nome do jogador">
+    <input type="number" id="playerHP" placeholder="HP" style="width:70px;">
+    <input type="number" id="playerInit" placeholder="Iniciativa" style="width:90px;">
+    <button onclick="addPlayer()">+ Adicionar</button>
+    <br>
+    <button onclick="startCombat()">Começar</button>
+    <button onclick="nextTurn()">▶ Próximo</button>
+    <button onclick="endCombat()">Encerrar</button>
+    <button onclick="resortByInitiative()">Reordenar por Iniciativa</button>
+  </div>
+
+  <div id="turnIndicator">Nenhum turno em andamento.</div>
+  <div id="roundCounter">Rodada: 0</div>
+
+  <ul id="playersList"></ul>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.controls {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+button {
+  margin: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+#turnIndicator {
+  font-size: 18px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+#roundCounter {
+  font-size: 16px;
+  text-align: center;
+  margin-top: 5px;
+}
+
+#playersList {
+  list-style: none;
+  padding: 0;
+}
+
+.player {
+  background: #fff;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #ccc;
+}
+
+.player.dragging {
+  opacity: 0.5;
+}
+
+.player .info {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.conditions span {
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 3px;
+  font-size: 12px;
+}
