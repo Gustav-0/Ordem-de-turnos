@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ordem de Turno — RPG</title>
+  <style>
+    :root{
+      --bg: #0f1220;           /* fundo escuro elegante */
+      --panel: #171b2e;        /* cartões */
+      --panel-2: #1f2440;      /* cartões 2 */
+      --text: #eef2ff;         /* texto primário */
+      --muted: #cbd5e1;        /* texto secundário */
+      --primary: #7c5cff;      /* destaque */
+      --accent: #22d3ee;       /* ciano */
+      --danger: #ef4444;       /* vermelho */
+      --ok: #22c55e;           /* verde */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text); background: radial-gradient(1200px 800px at 10% 0%, #11162a, var(--bg));
+      display:flex; align-items: stretch; justify-content: center;
+      padding: 24px;
+    }
+    .app{width: min(980px, 100%); display:grid; gap: 16px; grid-template-columns: 1fr;}
+    .header{display:flex; align-items:center; justify-content: space-between; gap: 12px;}
+    .title{font-size: clamp(20px, 3.5vw, 32px); font-weight: 800; letter-spacing: .5px;}
+    .controls{display:flex; gap:10px; flex-wrap: wrap;}
+    button{
+      appearance:none; border:none; color: var(--text); background: var(--panel-2);
+      padding: 10px 14px; border-radius: 12px; cursor: pointer; box-shadow: var(--shadow);
+      transition: transform .06s ease, filter .2s ease, background .2s ease;
+      font-weight: 700; letter-spacing:.2px;
+    }
+    button:hover{ filter: brightness(1.08); }
+    button:active{ transform: translateY(1px) scale(.99); }
+    .btn-primary{ background: linear-gradient(135deg, var(--primary), #5a77ff); }
+    .btn-next{ background: linear-gradient(135deg, var(--accent), #38bdf8); color: #071019; }
+    .btn-end{ background: linear-gradient(135deg, #ef4444, #f97316); }
+    .btn-ghost{ background: transparent; outline: 1px solid #2a325b; }
+
+    .panel{ background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%), var(--panel);
+      border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+
+    .form{ display:grid; grid-template-columns: 1.2fr .8fr auto; gap: 10px; align-items:end; }
+    .field{ display:flex; flex-direction: column; gap: 6px; }
+    label{ font-size: 12px; color: var(--muted); }
+    input[type="text"], input[type="number"]{
+      background: #0d1020; color: var(--text); border: 1px solid #2a325b;
+      padding: 10px 12px; border-radius: 10px; outline: none; box-shadow: inset 0 0 0 2px transparent;
+      transition: box-shadow .2s ease, border-color .2s ease; width: 100%;
+    }
+    input:focus{ border-color: #5b6ee1; box-shadow: inset 0 0 0 2px rgba(124,92,255,.35); }
+
+    .columns{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 840px){ .columns{ grid-template-columns: 1fr; } .form{ grid-template-columns: 1fr 1fr auto; } }
+    @media (max-width: 520px){ .form{ grid-template-columns: 1fr; } }
+
+    /* Lista de jogadores */
+    ol.player-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction: column; gap: 10px; }
+    .player{ display:grid; grid-template-columns: 1fr .4fr auto; gap: 10px; align-items:center; padding: 10px; border: 1px solid #2a325b; border-radius: 12px; background: #0d1020; }
+    .player .name{ font-weight: 700; }
+    .player .init{ color: var(--muted); font-size: 12px; }
+    .player .actions{ display:flex; gap:8px; }
+    .tag{ font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #1a1f39; color: var(--muted); border: 1px solid #2a325b; }
+
+    .player.current{ outline: 2px solid var(--accent); background: linear-gradient(180deg, rgba(34,211,238,.12), transparent), #0d1020; }
+    .player.current .name{ color: var(--accent); }
+
+    /* Indicador de turno */
+    .turn-indicator{ display:flex; align-items:center; justify-content: space-between; gap: 12px; }
+    .now{ display:flex; align-items:center; gap: 12px; }
+    .dot{ width: 12px; height:12px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 6px rgba(34,197,94,.15); animation: pulse 2s infinite; }
+    @keyframes pulse{ 0%{ box-shadow: 0 0 0 0 rgba(34,197,94,.45);} 70%{ box-shadow: 0 0 0 12px rgba(34,197,94,0);} 100%{ box-shadow: 0 0 0 0 rgba(34,197,94,0);} }
+    .next-up{ font-size: 12px; color: var(--muted); }
+
+    .empty{ color: var(--muted); text-align: center; padding: 22px; border: 1px dashed #2a325b; border-radius: 12px; background: #0b0f1b; }
+    .footer{ text-align:center; color: #7b84b6; font-size:12px; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="app" role="application">
+    <header class="header">
+      <div class="title">⚔️ Ordem de Turno — RPG</div>
+      <div class="controls">
+        <button id="btnStart" class="btn-primary" title="Iniciar combate (define a ordem e começa turno)">Começar</button>
+        <button id="btnNext" class="btn-next" title="Encerrar turno atual e passar para o próximo" disabled>Próximo Turno ▶</button>
+        <button id="btnEnd" class="btn-end" title="Encerrar combate" disabled>Encerrar</button>
+      </div>
+    </header>
+
+    <section class="panel form" aria-label="Adicionar jogadores">
+      <div class="field">
+        <label for="name">Nome do Jogador/PNJ</label>
+        <input id="name" type="text" placeholder="ex.: Aramil, Goblin #2" />
+      </div>
+      <div class="field">
+        <label for="init">Iniciativa (opcional)</label>
+        <input id="init" type="number" inputmode="numeric" placeholder="ex.: 15" />
+      </div>
+      <div class="field">
+        <button id="btnAdd" class="btn-ghost" title="Adicionar à fila">+ Adicionar</button>
+      </div>
+    </section>
+
+    <div class="columns">
+      <section class="panel" aria-label="Indicador de turno">
+        <div class="turn-indicator">
+          <div class="now" aria-live="polite" aria-atomic="true">
+            <span class="dot" id="statusDot" hidden></span>
+            <div>
+              <div id="nowLabel" style="font-size:14px;color:var(--muted)">Aguardando…</div>
+              <div id="nowName" style="font-size:22px;font-weight:800">—</div>
+            </div>
+          </div>
+          <div class="next-up" id="nextUp">Pronto para começar</div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Lista de jogadores">
+        <ol id="playerList" class="player-list" aria-live="polite" aria-atomic="false"></ol>
+        <div id="emptyState" class="empty">Nenhum jogador ainda. Adicione acima e clique em <b>Começar</b>.</div>
+      </section>
+    </div>
+
+    <div class="footer">Dica: você pode adicionar novos jogadores mesmo durante o combate — eles entram no final da fila.</div>
+  </main>
+
+  <script>
+    // ===== Estado =====
+    const state = {
+      players: [],           // { id, name, init }
+      running: false,
+      currentIndex: -1,
+      round: 0,
+      usedInitiative: false, // se alguma iniciativa foi fornecida na rodada atual
+      idSeq: 1,
+    };
+
+    // ===== Utilidades =====
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+    function render(){
+      const list = $('#playerList');
+      list.innerHTML = '';
+      if(state.players.length === 0){
+        $('#emptyState').style.display = 'block';
+      } else {
+        $('#emptyState').style.display = 'none';
+      }
+
+      state.players.forEach((p, idx) => {
+        const li = document.createElement('li');
+        li.className = 'player' + (idx === state.currentIndex && state.running ? ' current' : '');
+        li.setAttribute('data-id', p.id);
+
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = p.name;
+
+        const init = document.createElement('div');
+        init.className = 'init';
+        init.textContent = p.init != null && p.init !== '' ? `Inic.: ${p.init}` : '—';
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-ghost';
+        removeBtn.title = 'Remover';
+        removeBtn.textContent = 'Remover';
+        removeBtn.addEventListener('click', () => removePlayer(p.id));
+
+        actions.append(removeBtn);
+
+        li.append(name, init, actions);
+        list.append(li);
+      });
+
+      // Atualiza indicador
+      const hasPlayers = state.players.length > 0;
+      const dot = $('#statusDot');
+      const nowLabel = $('#nowLabel');
+      const nowName = $('#nowName');
+      const nextUp = $('#nextUp');
+
+      if(state.running && hasPlayers){
+        dot.hidden = false;
+        nowLabel.textContent = `Rodada ${state.round + 1}`;
+        const current = state.players[state.currentIndex];
+        nowName.textContent = current ? current.name : '—';
+        const next = state.players[(state.currentIndex + 1) % state.players.length];
+        nextUp.textContent = next ? `Próximo: ${next.name}` : '—';
+      } else if(!state.running && hasPlayers){
+        dot.hidden = true;
+        nowLabel.textContent = 'Pronto para começar';
+        nowName.textContent = '—';
+        nextUp.textContent = `${state.players.length} na fila`;
+      } else {
+        dot.hidden = true;
+        nowLabel.textContent = 'Aguardando…';
+        nowName.textContent = '—';
+        nextUp.textContent = 'Adicione jogadores e inicie';
+      }
+
+      // Botões
+      $('#btnStart').disabled = !hasPlayers || state.running;
+      $('#btnNext').disabled = !state.running || state.players.length === 0;
+      $('#btnEnd').disabled = !state.running;
+    }
+
+    function addPlayer(name, init){
+      if(!name) return;
+      const player = { id: state.idSeq++, name: name.trim(), init: init === '' ? null : Number(init) };
+
+      if(state.running){
+        // Durante combate: adiciona ao fim da fila.
+        state.players.push(player);
+      } else {
+        // Pré-combate: apenas empilha.
+        state.players.push(player);
+      }
+      render();
+    }
+
+    function removePlayer(id){
+      const idx = state.players.findIndex(p => p.id === id);
+      if(idx === -1) return;
+
+      // Se remover alguém antes do atual, ajuste o índice.
+      if(state.running){
+        if(idx < state.currentIndex){
+          state.currentIndex -= 1;
+        } else if(idx === state.currentIndex){
+          // Se remover o atual, o próximo assume sem avançar rodada.
+          // Após remoção, currentIndex aponta para o próximo elemento nessa posição.
+        }
+      }
+
+      state.players.splice(idx, 1);
+
+      // Se esvaziou, encerra automaticamente
+      if(state.running && state.players.length === 0){
+        endCombat();
+        return;
+      }
+
+      // Se o índice atual ficou fora do limite, volta para 0
+      if(state.running){
+        state.currentIndex = state.players.length ? state.currentIndex % state.players.length : -1;
+      }
+
+      render();
+    }
+
+    function startCombat(){
+      if(state.players.length === 0) return;
+      // Se houver iniciativas preenchidas, ordena por iniciativa desc
+      const hasAnyInit = state.players.some(p => typeof p.init === 'number' && !Number.isNaN(p.init));
+      if(hasAnyInit){
+        state.players.sort((a,b) => (b.init ?? -Infinity) - (a.init ?? -Infinity));
+        state.usedInitiative = true;
+      } else {
+        state.usedInitiative = false;
+      }
+
+      state.running = true;
+      state.currentIndex = 0;
+      state.round = 0;
+      render();
+    }
+
+    function nextTurn(){
+      if(!state.running || state.players.length === 0) return;
+      state.currentIndex = (state.currentIndex + 1) % state.players.length;
+      if(state.currentIndex === 0) state.round += 1; // completou ciclo
+      render();
+    }
+
+    function endCombat(){
+      state.running = false;
+      state.currentIndex = -1;
+      state.round = 0;
+      render();
+    }
+
+    // ===== Ligações de UI =====
+    $('#btnAdd').addEventListener('click', () => {
+      const name = $('#name').value;
+      const init = $('#init').value;
+      addPlayer(name, init);
+      $('#name').value = '';
+      $('#init').value = '';
+      $('#name').focus();
+    });
+
+    // Enter adiciona
+    $('#name').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('#btnAdd').click(); } });
+    $('#init').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); $('#btnAdd').click(); } });
+
+    $('#btnStart').addEventListener('click', startCombat);
+    $('#btnNext').addEventListener('click', nextTurn);
+    $('#btnEnd').addEventListener('click', endCombat);
+
+    // Atalhos de teclado
+    window.addEventListener('keydown', (e) => {
+      if(e.target.tagName === 'INPUT') return; // não interfere com campos
+      if(e.key.toLowerCase() === 'n') { nextTurn(); }
+      if(e.key.toLowerCase() === 's') { startCombat(); }
+      if(e.key.toLowerCase() === 'e') { endCombat(); }
+    });
+
+    // Render inicial
+    render();
+  </script>
+</body>
+</html>
